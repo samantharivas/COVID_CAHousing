@@ -1,0 +1,256 @@
+---
+title: "ADS506 Project"
+output: pdf_document
+date: "2023-11-11"
+---
+
+```{r setup}
+library(tidyverse)
+library(fpp3)
+library(gridExtra)
+library(ggplot2)
+library(tsibble)
+library(forecast)
+library(patchwork)
+library(fable)
+library(readxl)
+library(moments)
+library(imputeTS)
+```
+
+```{r}
+# Import excel file 
+home_prices <- read_excel("MedianPricesofExistingDetachedHomesHistoricalData.xlsx", skip = 6) |>
+  mutate(`Mon-Yr` = as.Date(`Mon-Yr`, format = "%Y-%m")) |>
+  as_tsibble(index = "Mon-Yr") # create tsibble 
+
+# plot ts object 
+autoplot(home_prices, CA) + 
+  theme_minimal() 
+```
+```{r}
+dim(home_prices) 
+```
+
+
+```{r}
+# Specify the columns to convert to numeric
+cols_to_convert <- c("Amador", "Calaveras", "Contra-Costa", "Del Norte", "El Dorado", "Glenn", "Kings", "Lake", 
+                   "Lassen", "Madera", "Mariposa", "Nevada", "Plumas", "San Benito", "San Mateo", 
+                   "Shasta", "Siskiyou", "Solano", "Stanislaus", "Sutter", "Tehama", "Trinity", 
+                   "Tuolumne", "Monterey", "Mono", "Santa Cruz", "San Luis Obispo", 
+                   "San Benito", "San Mateo", "Shasta", "Siskiyou", "Solano", "Sonoma", "Stanislaus", 
+                   "Sutter", "Tehama", "Trinity", "Tulare", "Ventura", "Yolo", "Yuba", "Condo", 
+                   "LA Metro", "Central Coast", "Central Valley", "Far North", "Inland Empire", 
+                   "S.F. Bay Area", "SoCal", "Mendocino", "San Joaquin")
+
+# Convert columns to numeric
+for (col in cols_to_convert) {
+  home_prices[[col]] <- as.numeric(as.character(home_prices[[col]]))
+}
+
+# Check the structure of your data frame after conversion
+str(home_prices)
+
+```
+```{r}
+#identify outliers using boxplot
+par(mfrow = c(2, 4))
+
+# Exclude the "Mon-Yr" column
+numeric_columns <- names(home_prices)[sapply(home_prices, is.numeric) & names(home_prices) != "Mon-Yr"]
+
+for (col in numeric_columns) {
+  boxplot(home_prices[[col]],
+          xlab = col,
+          main = paste(col, "Boxplot"))
+}
+
+for (col in numeric_columns) {
+  hist(home_prices[[col]],
+          xlab = col,
+          main = paste(col, "Histogram"))
+}
+
+```
+```{r}
+#check for duplicates
+sum(duplicated(home_prices))
+```
+```{r}
+# running a correlation test 
+cor_matrices <- list()
+for (col in numeric_columns) {
+  # Create a matrix with "Mon-Yr" and the current numeric column
+  matrix_for_cor <- cbind(home_prices$`Mon-Yr`, home_prices[[col]])
+
+  # Calculate correlation matrix
+  cor_matrices[[col]] <- cor(matrix_for_cor)
+}
+
+# subset data to be numeric only
+numeric_home_prices <- home_prices[, numeric_columns]
+```
+
+
+```{r}
+# convert date to MM/YYYY format
+home_prices$date <- as.Date(paste0(home_prices$`Mon-Yr`, "-01"), format = "%Y-%m-%d")
+home_prices$date <- as.Date(home_prices$date, format ="%m %Y")
+
+# create separate column for month and year
+home_prices <- home_prices %>%
+  mutate(Month = month(date, label = TRUE), Year = year(date))
+
+# convert date to MM/YYYY format
+home_prices$Date <- format(home_prices$date, "%m/%Y")
+
+# remove mon-yr column and ...55 column 
+columns_to_keep <- setdiff(names(home_prices), c("Mon-Yr", "...55", "date"))
+home_prices <- home_prices[, columns_to_keep]
+
+# View the updated data frame
+print(home_prices)
+str(home_prices)
+dim(home_prices)
+```
+
+```{r}
+# check for missing values 
+missing_per_column <- colSums(is.na(home_prices))
+print(missing_per_column)
+
+# exclude non-numeric columns 
+numeric_columns <- home_prices[sapply(home_prices, is.numeric)] 
+
+# calculate skewness for all numeric variables
+skewness_values <- moments::skewness(numeric_columns, na.rm = TRUE)
+
+print(skewness_values)
+```
+```{r}
+# remove null values 
+home_prices_na <- na.omit(home_prices)
+
+home_prices_na
+dim(home_prices_na)
+
+# exclude non-numeric columns 
+numeric_columns_na <- home_prices_na[sapply(home_prices_na, is.numeric)] 
+
+# calculate skewness for all numeric variables
+skewness_values_na <- moments::skewness(numeric_columns_na, na.rm = TRUE)
+
+print(skewness_values_na)
+```
+
+```{r}
+# use imputer to fill missing value with median 
+home_prices_imp <- home_prices %>%
+  mutate(across(-c('Date', 'Month', 'Year'), ~ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+home_prices_median <- home_prices %>%
+  mutate(across(-c('Date', 'Month', 'Year'), ~ifelse(is.na(.), median(., na.rm = TRUE), .)))
+str(home_prices_imp)
+
+home_prices_imp
+dim(home_prices_imp)
+# exclude non-numeric columns 
+numeric_columns_imp <- home_prices_imp[sapply(home_prices_imp, is.numeric)]
+numeric_columns_median <- home_prices_median[sapply(home_prices_median, is.numeric)] 
+
+# calculate skewness for all numeric variables
+skewness_values_imp <- moments::skewness(numeric_columns_imp, na.rm = TRUE)
+skewness_values_median <- moments::skewness(numeric_columns_median, na.rm = TRUE)
+print(skewness_values_imp)
+```
+```{r}
+skewness_all <- data.frame(
+  Original_Skewness = skewness_values,
+  Skewness_NA = skewness_values_na,
+  Skewness_mean= skewness_values_imp, 
+  Skewness_median= skewness_values_median
+)
+
+skewness_all
+```
+
+```{r}
+summary(home_prices)
+```
+```{r}
+# make a subset df removing condo, LA metro, Central Coast, Central Valley, Far North, Inland Empire, and S.F. Bay Area 
+regions_to_exclude <- c("Condo", "LA Metro", "Central Coast", "Central Valley", "Far North", "Inland Empire", "S.F. Bay Area", "SoCal")
+
+subset_df <- home_prices[, !(colnames(home_prices) %in% regions_to_exclude)]
+
+# View the updated subset data frame
+str(subset_df)
+
+autoplot(as.ts(subset_df), subset_df$CA) +
+  theme_minimal()
+```
+```{r}
+# create a data frame with only the excluded regions
+regions_to_exclude_df <- home_prices[, c("Year", regions_to_exclude)]
+
+regions_to_exclude_df
+
+autoplot(as.ts(regions_to_exclude_df), subset_df$CA) +
+  theme_minimal()
+```
+```{r}
+# calculate the first differences for all columns in df
+home_prices_imp <- home_prices_imp %>%
+  mutate(across(-everything(), ~diff(.)))
+
+home_prices_imp 
+```
+
+```{r}
+# subset data to be numeric only
+numeric_home_prices <- home_prices_imp[, numeric_columns]
+
+# Calculate correlation matrix
+correlation <- cor(numeric_home_prices)
+library(corrplot)
+corrplot(correlation, order = "hclust", method = "color", addrect = 2)
+
+correlation
+```
+
+```{r}
+# decompose ts 
+# Decompose the time series 
+decomposed <- decompose(ts(home_prices_imp$CA, frequency = 12))
+
+autoplot(decomposed) +
+  labs(title = "Seasonal Decomposition")
+
+
+#stl_decomposed <- stl(home_prices_imp, s.window = "periodic")
+#autoplot(stl_decomposed)
+```
+```{r}
+ACF <- acf(home_prices_imp, lag.max = 50)
+```
+
+```{r}
+ACF <- acf(home_prices_imp$CA, lag.max = 50)
+pacf <- pacf(home_prices_imp$CA)
+```
+```{r}
+library(zoo)
+library(TTR)
+
+#simple moving average calculation
+home_prices_imp$MA <- zoo::rollapply(home_prices_imp$CA, width = 4, FUN = mean, fill = NA)
+
+ggplot(home_prices_imp, aes(x = Year)) +
+  geom_line(aes(y = CA, color = "Actual Sales")) +
+  geom_line(aes(y = MA, color = "MA")) +
+  labs(title = "", x = "Year", y = "")+
+  scale_color_manual(values = c("Actual Sales" = "blue", "MA" = "red")) + 
+  theme_minimal()
+```
+
