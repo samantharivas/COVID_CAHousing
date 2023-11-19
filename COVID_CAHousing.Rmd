@@ -3,9 +3,19 @@ title: "COVID_CAHOUSING"
 output: pdf_document
 date: "2023-11-16"
 ---
-Data Source: The data was sources from the Califronia Association of Realtors website. <https://www.car.org/marketdata/data/housingdata>. The data contains the median price of existing single-family detached homes in California, ranging from january 1990 until SEotember 2023. 
 
-```{r setup}
+# Effect of COVID on California Housing Prices (1990-2023)
+
+Data Source: <https://www.car.org/marketdata/data/housingdata>.
+
+The data was sources from the California Association of Realtor website.The data contains the median price of existing single-family detached homes in California, ranging from January 1990 until September 2023.
+
+GitHub link: <https://github.com/samantharivas/COVID_CAHousing.git>
+
+## Import Libraries
+
+```{r}
+# import necessary libaries 
 library(tidyverse)
 library(fpp3)
 library(gridExtra)
@@ -20,7 +30,9 @@ library(imputeTS)
 library(zoo)
 library(TTR)
 ```
-# Importing Data 
+
+## Importing Data
+
 ```{r}
 # import excel file 
 home_prices <- read_excel("MedianPricesofExistingDetachedHomesHistoricalData.xlsx", skip = 6) |>
@@ -32,15 +44,22 @@ autoplot(home_prices, CA) +
   theme_minimal() 
 ```
 
+## Data Inspection
+
 ```{r}
 # check dimension of df 
-dim(home_prices)
+dim(home_prices) # df holds 405 rows and 65 columns 
 home_prices
 ```
 
+```{r}
+str(home_prices) # df consists of numeric and character values 
+```
 
 ```{r}
-# specify the columns to convert to numeric
+# convert columns to correct data type 
+
+# specify the columns labeled as character to convert to numeric
 cols_to_convert <- c("Amador", "Calaveras", "Contra-Costa", "Del Norte", "El Dorado", "Glenn", "Kings", "Lake", 
                    "Lassen", "Madera", "Mariposa", "Nevada", "Plumas", "San Benito", "San Mateo", 
                    "Shasta", "Siskiyou", "Solano", "Stanislaus", "Sutter", "Tehama", "Trinity", 
@@ -50,7 +69,7 @@ cols_to_convert <- c("Amador", "Calaveras", "Contra-Costa", "Del Norte", "El Dor
                    "LA Metro", "Central Coast", "Central Valley", "Far North", "Inland Empire", 
                    "S.F. Bay Area", "SoCal", "Mendocino", "San Joaquin")
 
-# convert columns to numeric
+# convert listed columns to numeric
 for (col in cols_to_convert) {
   home_prices[[col]] <- as.numeric(as.character(home_prices[[col]]))
 }
@@ -75,18 +94,21 @@ home_prices <- home_prices[, columns_to_keep]
 
 #view the updated data frame
 print(home_prices)
-str(home_prices)
 ```
+
 ```{r}
 # make a subset df removing condo, LA metro, Central Coast, Central Valley, Far North, Inland Empire, and S.F. Bay Area 
 regions_to_exclude <- c("Condo", "LA Metro", "Central Coast", "Central Valley", "Far North", "Inland Empire", "S.F. Bay Area", "SoCal")
 
 home_prices <- home_prices[, !(colnames(home_prices) %in% regions_to_exclude)]
 ```
+
 ```{r}
 #check for duplicates
-sum(duplicated(home_prices))
+sum(duplicated(home_prices)) # no duplicate values are present 
 ```
+
+## Exploratory Data Analysis
 
 ```{r}
 #identify outliers using boxplot
@@ -109,7 +131,6 @@ for (col in numeric_columns) {
 
 ```
 
-
 ```{r}
 # check for missing values 
 missing_values <- colSums(is.na(home_prices))
@@ -121,17 +142,17 @@ missing_percentage <- missing_percentage[order(-missing_percentage)]
 missing_percentage
 ```
 
-We decided to drop columns whos data was more than 15% missing to maintain data integrity. 
+We decided to drop columns that data was more than 15% missing to maintain data integrity.
 
 ```{r}
-# Identify columns with more than 50% missing values
+# identify columns with more than 50% missing values
 columns_to_drop <- names(missing_percentage[missing_percentage > 15])
 
-# Print columns with more than 15% missing values
+# print columns with more than 15% missing values
 cat("Columns with More than 15% Missing Values:\n")
 cat(columns_to_drop, sep = ", ")
 
-# Drop the identified columns with more than 50% missing values from the DataFrame
+# drop the identified columns with more than 50% missing values from the DataFrame
 home_prices <- home_prices[, !(names(home_prices) %in% columns_to_drop)]
 
 ```
@@ -149,6 +170,7 @@ skewness_values_imp <- moments::skewness(numeric_columns_imp, na.rm = TRUE)
 
 print(skewness_values_imp)
 ```
+
 ```{r}
 # calculate skewness of original df 
 # exclude non-numeric columns 
@@ -169,55 +191,72 @@ skewness_all <- data.frame(
 
 skewness_all
 ```
+
 ```{r}
 summary(home_prices_imp)
 ```
-```{r}
-home_prices_imp
 
+```{r}
+dim(home_prices_imp) # new df has 405 rows and 34 columns 
 str(home_prices_imp)
-```
-```{r}
-# subset data to be numeric only
-#numeric_columns_imp <- home_prices_imp[sapply(home_prices_imp, is.numeric)]
-#numeric_home_prices <- home_prices_imp[, numeric_columns]
-
-# Calculate correlation matrix
-#correlation <- cor(numeric_home_prices)
-#library(corrplot)
-#corrplot(correlation, order = "hclust", method = "color", addrect = 2)
-
-#correlation
 ```
 
 ```{r}
 # decompose ts 
-# Decompose the time series 
+# decompose the time series 
 decomposed <- decompose(ts(home_prices_imp$CA, frequency = 12))
 
 autoplot(decomposed) +
   labs(title = "Seasonal Decomposition")
-
-
-#stl_decomposed <- stl(home_prices_imp, s.window = "periodic")
-#autoplot(stl_decomposed)
 ```
+```{r}
+plot(home_prices_imp$CA, type = "l", main = "Time Series Plot")
+
+# perform seasonal decomposition using STL
+# convert df into ts 
+ts_data <- ts(home_prices_imp, frequency = 12)
+CA_ts <- ts(home_prices_imp$CA, frequency = 12)
+seasonal_components <- stl(CA_ts, s.window = "periodic")
+
+# deseasonalize the data
+home_prices_imp$deseasonalized <- seasonal_components$time.series[, "remainder"]
+home_prices_imp
+```
+
 ```{r}
 # Plot the decomposed components
 plot(decomposed$seasonal, main = "Seasonal Component")
-```
-```{r}
-plot(decomposed$trend, main = "Seasonal Component")
+
+plot(decomposed$trend, main = "Trend")
 ```
 
 ```{r}
-ACF <- acf(home_prices_imp, lag.max = 50)
+# perform Augmented Dickey-Fuller test
+library(tseries)
+
+# convert the deseasonalized column to a numeric vector
+home_prices_imp$deseasonalized <- as.numeric(home_prices_imp$deseasonalized)
+
+adf_test_result <- adf.test(home_prices_imp$deseasonalized)
+adf_test_result
+
+# check p-value for stationarity
+if (adf_test_result$p.value < 0.05) {
+  cat("Time series is stationary.\n")
+} else {
+  cat("Time series is not stationary. Applying differencing.\n")
+}
+
+# apply differencing to the deseasonalized component
+home_prices_imp$deseasonalized_diff <- c(NA, diff(home_prices_imp$deseasonalized))
+home_prices_imp
 ```
 
 ```{r}
 ACF <- acf(home_prices_imp$CA, lag.max = 50)
-pacf <- pacf(home_prices_imp$CA)
+pacf <- pacf(home_prices_imp$CA, lag.max = 50)
 ```
+
 ```{r}
 #simple moving average calculation
 home_prices_imp$MA <- zoo::rollapply(home_prices_imp$CA, width = 4, FUN = mean, fill = NA)
@@ -231,9 +270,6 @@ ggplot(home_prices_imp, aes(x = Year)) +
 ```
 
 ```{r}
-# convert df into ts 
-ts_data <- ts(home_prices_imp, frequency = 12)
-
 correlation_matrix <- cor(ts_data, use = "pairwise.complete.obs")
 correlation_matrix
 ```
@@ -244,19 +280,38 @@ CA <- home_prices_imp
 
 CA
 ```
+
 ```{r}
+# create a ts for CA column 
 CA_ts <- ts(CA$CA, frequency = 12, start = c(1990, 1), end = c(2023, 9))
 ```
 
+## Feature Enginering 
+
 ```{r}
-home_prices.lm <- tslm(CA_ts ~ trend + I(trend^2))
-par(mfrow = c(2,1))
-plot(CA_ts, xlab = "Time", ylab = "Shipments", ylim = c(160000 , 900000), bty = "l")
-lines(home_prices.lm$fitted, lwd = 2)
-CA_ts_zoom <- window(CA_ts, start = c(1990, 1), end = c(2023, 9))
-plot(CA_ts_zoom, xlab = "Year", ylab = "CA", ylim = c(160000 , 900000), bty = "l")
+# create additional lag features
+CA$lag1 <- lag(CA$deseasonalized_diff, 1)
+CA$lag2 <- lag(CA$deseasonalized_diff, 2)
+CA$lag3 <- lag(CA$deseasonalized_diff, 3)
+
+# rolling statistics
+CA$rolling_std <- zoo::rollapply(CA$deseasonalized_diff, width = 3, FUN = sd, fill = NA, align = "right")
+CA$rolling_mean <- zoo::rollapply(CA$deseasonalized_diff, width = 3, FUN = mean, fill = NA, align = "right")
 ```
-# Modeling
+
+```{r}
+# calculate correlation matrix
+cor_matrix <- cor(CA[, c("CA", "lag1", "lag2", "lag3", "rolling_std", "rolling_mean")], use = "complete.obs")
+
+print(cor_matrix)
+```
+
+```{r}
+# apply log transformation to the target variable - data transformation 
+CA$CA_log <- log(CA$CA + 1)
+```
+
+## Train-Test Split
 
 ```{r}
 # Create 2 Partitions
@@ -272,11 +327,25 @@ autoplot(train) +
   autolayer(validation, color = "blue")
 ```
 
+## Modeling
+
+```{r}
+# fit linear model
+home_prices.lm <- tslm(CA_ts ~ trend + I(trend^2))
+
+# plot linear model 
+plot(CA_ts, xlab = "Time", ylab = "Shipments", ylim = c(160000 , 900000), bty = "l")
+lines(home_prices.lm$fitted, lwd = 2)
+
+CA_ts_zoom <- window(CA_ts, start = c(1990, 1), end = c(2023, 9))
+plot(CA_ts_zoom, xlab = "Year", ylab = "CA", ylim = c(160000 , 900000), bty = "l")
+
+```
+
 ```{r}
 # Naive Model
 n_model <- naive(train, h = 5, level = 95)
 ```
-
 
 ```{r}
 # plot the Naive Model - Training set
@@ -291,9 +360,8 @@ autoplot(train) +
 sn_model <- snaive(train, h = 5)
 ```
 
-
 ```{r}
-# plot the snaive Model - Training set
+# plot the naive Model - Training set
 autoplot(train) + 
   autolayer(sn_model, color = "red", series = "Seasonal Naive") +
    autolayer(validation, color = "blue", series = "Actual")
@@ -320,7 +388,6 @@ autoplot(train) +
 
 ```
 
-
 ```{r}
 # Determining the Error
 accuracy(st_forecast)
@@ -335,4 +402,3 @@ mean(abs(n_model$residuals), na.rm = T)
 ```{r}
 sqrt(mean(n_model$residuals^2, na.rm = T)) 
 ```
-
