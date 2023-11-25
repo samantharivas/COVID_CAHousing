@@ -158,7 +158,7 @@ home_prices <- home_prices[, !(names(home_prices) %in% columns_to_drop)]
 ```
 
 ```{r}
-# use imputer to fill missing value with median 
+# use imputer to fill missing value with mean
 home_prices_imp <- home_prices %>%
   mutate(across(-date, ~ifelse(is.na(.), mean(., na.rm = TRUE), .)))
 
@@ -256,17 +256,28 @@ home_prices_imp
 ACF <- acf(home_prices_imp$CA, lag.max = 50)
 pacf <- pacf(home_prices_imp$CA, lag.max = 50)
 ```
+```{r}
+# remove missing values 
+clean_diff<- na.omit(home_prices_imp$deseasonalized_diff)
+
+# calculate ACF/PACF on cleaned df 
+ACF_diff <- acf(clean_diff, lag.max = 50)
+pacf_diff <- pacf(clean_diff, lag.max = 50)
+```
 
 ```{r}
 #simple moving average calculation
-home_prices_imp$MA <- zoo::rollapply(home_prices_imp$CA, width = 4, FUN = mean, fill = NA)
+home_prices_imp$MA <- zoo::rollapply(home_prices_imp$CA, width = 4, FUN = mean, fill = NA, align = "right")
 
-ggplot(home_prices_imp, aes(x = Year)) +
+ggplot(home_prices_imp, aes(x = date, y = CA)) +
   geom_line(aes(y = CA, color = "Actual Sales")) +
   geom_line(aes(y = MA, color = "MA")) +
   labs(title = "", x = "Year", y = "")+
   scale_color_manual(values = c("Actual Sales" = "blue", "MA" = "red")) + 
   theme_minimal()
+```
+```{r}
+home_prices_imp
 ```
 
 ```{r}
@@ -316,10 +327,10 @@ CA$CA_log <- log(CA$CA + 1)
 ```{r}
 # Create 2 Partitions
 
-# Training set is from January 1990 - December 2019
-# Validation set is from January 2020 - September 2023
-train <- window(CA_ts, start = c(1990, 1), end = c(2019, 12))
-validation <- window(CA_ts, start = c(2020, 1))
+# Training set is from January 2014- December 2018
+# Validation set is from January 2019 - September 2023
+train <- window(CA_ts, start = c(2014, 1), end = c(2018, 12))
+validation <- window(CA_ts, start = c(2019, 1))
 ```
 
 ```{r}
