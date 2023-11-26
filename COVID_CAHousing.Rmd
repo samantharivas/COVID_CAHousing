@@ -341,21 +341,29 @@ autoplot(train) +
 ## Modeling
 
 ```{r}
-# fit linear model
-home_prices.lm <- tslm(CA_ts ~ trend + I(trend^2))
-
-# plot linear model 
-plot(CA_ts, xlab = "Time", ylab = "Shipments", ylim = c(160000 , 900000), bty = "l")
-lines(home_prices.lm$fitted, lwd = 2)
-
-CA_ts_zoom <- window(CA_ts, start = c(1990, 1), end = c(2023, 9))
-plot(CA_ts_zoom, xlab = "Year", ylab = "CA", ylim = c(160000 , 900000), bty = "l")
-
+train <- window(CA.ts, start = c(2014, 1), end = c(2018, 12))
+validation <- window(CA.ts, start = c(2019, 1))
 ```
 
+
 ```{r}
+train
+```
+
+
+```{r}
+autoplot(train) + 
+  autolayer(validation, color = "blue")
+```
+
+
+
+## Modeling
+
+
 # Naive Model
-n_model <- naive(train, h = 5, level = 95)
+```{r}
+n_model <- naive(train, h = 57)
 ```
 
 ```{r}
@@ -367,8 +375,14 @@ autoplot(train) +
 ```
 
 ```{r}
+summary(n_model)
+```
+
+
+
 # Seasonal Naive Model
-sn_model <- snaive(train, h = 5)
+```{r}
+sn_model <- snaive(train, h = 57)
 ```
 
 ```{r}
@@ -379,15 +393,18 @@ autoplot(train) +
 
 ```
 
+
+# Season and Trend - Time Series Linear Model 
+
 ```{r}
-# Season and Trend
+
 st_model <- tslm(train ~ trend + season)
 
 summary(st_model)
 ```
 
 ```{r}
-st_forecast <- forecast(st_model, h=5)
+st_forecast <- forecast(st_model, h=57)
 st_forecast
 ```
 
@@ -401,18 +418,12 @@ autoplot(train) +
 
 ```{r}
 # Determining the Error
-accuracy(st_forecast)
 accuracy(n_model)
 accuracy(sn_model)
+accuracy(st_forecast)
 ```
 
-```{r}
-mean(abs(n_model$residuals), na.rm = T) 
-```
 
-```{r}
-sqrt(mean(n_model$residuals^2, na.rm = T)) 
-```
 
 ## SARIMA model
 
@@ -474,13 +485,16 @@ autoplot(tbats_forecast) +
 sarima_accuracy <- accuracy(sarima_forecast)
 theta_accuracy <- accuracy(theta_forecast)
 tbats_accuracy <- accuracy(tbats_forecast)
+naive_accuracy <- accuracy(n_model)
+snaive_accuracy <- accuracy(sn_model)
+st_accuracy <- accuracy(st_forecast)
 
 # Create a table
 accuracy_table <- data.frame(
-  Model = c("SARIMA", "Theta", "TBATS"),
-  RMSE = c(sarima_accuracy[1], theta_accuracy[1], tbats_accuracy[1]),
-  MAE = c(sarima_accuracy[2], theta_accuracy[2], tbats_accuracy[2]),
-  MAPE = c(sarima_accuracy[3], theta_accuracy[3], tbats_accuracy[3])
+  Model = c("SARIMA", "Theta", "TBATS", "Naive", "Seasonal_Naive", "Trend_Season"),
+  RMSE = c(sarima_accuracy[1], theta_accuracy[1], tbats_accuracy[1], naive_accuracy[1], snaive_accuracy[1], st_accuracy[1]),
+  MAE = c(sarima_accuracy[2], theta_accuracy[2], tbats_accuracy[2], naive_accuracy[2], snaive_accuracy[2], st_accuracy[2]),
+  MAPE = c(sarima_accuracy[3], theta_accuracy[3], tbats_accuracy[3], naive_accuracy[3], snaive_accuracy[3], st_accuracy[3])
 )
 
 
