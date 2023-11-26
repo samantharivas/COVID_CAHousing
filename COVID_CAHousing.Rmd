@@ -340,22 +340,10 @@ autoplot(train) +
 
 ## Modeling
 
-```{r}
-train <- window(CA.ts, start = c(2014, 1), end = c(2018, 12))
-validation <- window(CA.ts, start = c(2019, 1))
-```
-
 
 ```{r}
 train
 ```
-
-
-```{r}
-autoplot(train) + 
-  autolayer(validation, color = "blue")
-```
-
 
 
 ## Modeling
