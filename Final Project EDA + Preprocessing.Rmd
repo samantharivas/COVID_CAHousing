@@ -1,0 +1,467 @@
+---
+title: "ADS506 Assignment 1.2"
+author: "Katie Mears"
+date: "2023-10-30"
+output: pdf_document
+---
+
+Assignment: Propose a Time Series Data set for Your Final Project
+
+Objective: Perform an impact assessment to understand the shift that occurred in California home prices after the Covid Pandemic. I propose to take the average home prices by year prior to covid occurring and forcast the home prices for the time period during covid and then compare them to the actual home prices after Covid. The primary goal is descriptive in nature but will require time series forcasting to develop the home prices if Covid had not occurred.
+
+Data Source: The data was sources from the Califronia Association of Realtors website. <https://www.car.org/marketdata/data/housingdata>. The data contains the Median Price of existing single-family detached homes in California. It has the home prices reported for California as a whole but also offers the home prices by City. The data starts in January 1990 and is given in month-year format through September 2023.
+
+```{r}
+# install.packages("arrow")
+# install.packages("fpp3")
+# install.packages("here")
+# install.packages("plotly")
+```
+
+```{r}
+library(fpp3)
+library(here)
+library(plotly)
+```
+
+```{r}
+library(forecast)
+```
+
+Importing the Data, skip the first 7 lines
+
+```{r}
+Cali <- read.csv("C:/Users/katie/Downloads/CaliforniaHomes.csv", skip = 7)
+
+head(Cali)
+```
+
+```{r}
+missing_counts <- colSums(is.na(Cali))
+missing_counts
+```
+
+Change the Mon.Yr column to a date column and reformat
+
+```{r}
+Cali$Mon.Yr <- paste("01", Cali$Mon.Yr, sep = "-")
+Cali$Mon.Yr <- as.Date(Cali$Mon.Yr, format = "%d-%b-%y")
+head(Cali)
+```
+
+Change the values to numeric instead of currency
+
+```{r}
+for (col in names(Cali)[-1]) {
+  Cali[[col]] <- as.numeric(gsub("[^0-9.]+", "", gsub(",", "", as.character(Cali[[col]]))))
+}
+head(Cali)
+```
+
+View the dimension of the data set
+
+```{r}
+dim(Cali)
+```
+
+View the summary of the data set
+
+```{r}
+str(Cali)
+```
+
+View Missing Data
+
+```{r}
+missing_counts <- colSums(is.na(Cali))
+missing_counts
+```
+
+Drop the columns full of missing data
+
+```{r}
+num_missing <- 405
+columns_to_drop <- names(missing_counts[missing_counts == num_missing])
+Cali <- Cali[, !names(Cali) %in% columns_to_drop]
+head(Cali)
+```
+
+View the summary of the data set after drop
+
+```{r}
+str(Cali)
+```
+
+```{r}
+missing_percentage <- colMeans(is.na(Cali)) * 100
+missing_percentage
+```
+
+```{r}
+CA_complete_columns <- Cali[, colSums(is.na(Cali)) == 0]
+CA_complete_columns
+```
+
+```{r}
+selected_columns <- Cali[, c("Mon.Yr", "CA", "Alameda", "Fresno", "Humboldt", "Kern", "Ventura", "LA.Metro", "San.Francisco", "San.Diego")]
+head(selected_columns)
+```
+
+
+Create Data Frame for selected columns
+
+```{r}
+selected_CA <- data.frame(Cali = selected_columns)
+```
+
+
+
+
+# Analyzing Seasonal Patterns - CA 
+
+```{r}
+Cali$Month <- format(Cali$Mon.Yr, "%m")
+monthly_avg <- aggregate(CA ~ Month, data = Cali, FUN = mean)
+```
+
+```{r}
+ggplot(monthly_avg, aes(x = factor(Month), y = CA)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Monthly Average Real Estate Prices", x = "Month", y = "Average Price in CA")
+```
+
+
+# Analyzing Seasonal Patterns - SF 
+
+```{r}
+Cali$Month <- format(Cali$Mon.Yr, "%m")
+monthly_avg <- aggregate(San.Francisco ~ Month, data = Cali, FUN = mean)
+```
+
+```{r}
+ggplot(monthly_avg, aes(x = factor(Month), y = San.Francisco)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Monthly Average Real Estate Prices", x = "Month", y = "Average Price in SF")
+```
+
+
+# Analyzing Seasonal Patterns - SD 
+
+```{r}
+Cali$Month <- format(Cali$Mon.Yr, "%m")
+monthly_avg <- aggregate(San.Diego ~ Month, data = Cali, FUN = mean)
+```
+
+```{r}
+ggplot(monthly_avg, aes(x = factor(Month), y = San.Diego)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Monthly Average Real Estate Prices", x = "Month", y = "Average Price in San Diego")
+```
+# Analyzing Seasonal Patterns - Alameda 
+
+```{r}
+Cali$Month <- format(Cali$Mon.Yr, "%m")
+monthly_avg <- aggregate(Alameda ~ Month, data = Cali, FUN = mean)
+```
+
+```{r}
+ggplot(monthly_avg, aes(x = factor(Month), y = Alameda)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Monthly Average Real Estate Prices", x = "Month", y = "Average Price in Alameda")
+```
+
+
+```{r}
+# Assuming 'selected_CA' is your dataframe and 'Mon.Yr' is a column in it
+numeric_cols <- names(selected_CA)[sapply(selected_CA, is.numeric)][-1]  # Excluding the first non-numeric column
+
+for (col in numeric_cols) {
+  selected_CA$Month <- format(selected_CA$Mon.Yr, "%m")
+  
+  # Filter out missing values
+  non_missing_rows <- complete.cases(selected_CA[, col])
+  
+  if (any(non_missing_rows)) {
+    monthly_avg <- aggregate(selected_CA[non_missing_rows, col] ~ Month, 
+                             data = selected_CA[non_missing_rows, ], FUN = mean)
+    
+    # Extract column name without special characters
+    col_cleaned <- gsub("[^A-Za-z0-9]", "", col)
+    
+    # Create plots for each numeric column and print them
+    print(
+      ggplot(monthly_avg, aes(x = factor(Month), y = !!sym(paste0("`", col_cleaned, "`")))) +
+      geom_bar(stat = "identity", fill = "skyblue") +
+      labs(title = paste("Monthly Average", col), x = "Month", y = "Average Price")
+    )
+  } else {
+    print(paste("No valid data for column", col))
+  }
+}
+```
+
+
+
+
+# Convert Cali dataset into a time series object
+
+```{r}
+ts_data <- ts(selected_columns, frequency = 12)
+```
+
+# Perform seasonal decomposition
+
+```{r}
+
+decomp_result <- decompose(ts_data)
+
+# Plot the decomposed components
+plot(decomp_result$seasonal, main = "Seasonal Component")
+
+```
+
+```{r}
+plot(decomp_result$trend, main = "Trend Component")
+
+```
+
+```{r}
+plot(decomp_result$random, main = "Random/Residual Component")
+```
+
+# Summary Stats
+
+```{r}
+summary(Cali)
+```
+
+# Correlation Analysis
+
+```{r}
+correlation_matrix <- cor(ts_data, use = "pairwise.complete.obs")
+correlation_matrix
+```
+
+
+
+
+Subset CA Column
+
+```{r}
+extracted_CA <- Cali$CA
+# extracted_CA
+```
+
+```{r}
+head(extracted_CA)
+```
+
+Create Data Frame for Extracted CA column
+
+```{r}
+extracted_CA <- data.frame(CA = extracted_CA)
+```
+
+```{r}
+head(extracted_CA)
+```
+
+Find Min and Max Value
+
+```{r}
+min_value <- min(extracted_CA$CA)
+max_value <- max(extracted_CA$CA)
+
+
+cat("Minimum Value:", min_value, "\n")
+cat("Maximum Value:", max_value, "\n")
+
+```
+
+# Create Time Series Plot
+
+```{r}
+CA.ts <- ts(extracted_CA, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+```
+
+```{r}
+plot(CA.ts, 
+     main = "California Home Price Time Series",
+     xlab = "Mon-Yr",
+     ylab = "CA",
+     type = "l", 
+     col = "blue")
+```
+
+```{r}
+plot(CA.ts, xlab = "Mon-Yr", ylab = "CA", ylim = c(160000, 900000), bty = "l")
+```
+
+```{r}
+home_prices.lm <- tslm(CA.ts ~ trend + I(trend^2))
+par(mfrow = c(2,1))
+plot(CA.ts, xlab = "Time", ylab = "Shipments", ylim = c(160000 , 900000), bty = "l")
+lines(home_prices.lm$fitted, lwd = 2)
+CA.ts.zoom <- window(CA.ts, start = c(1990, 1), end = c(2023, 9))
+plot(CA.ts.zoom, xlab = "Mon-Yr", ylab = "CA", ylim = c(160000 , 900000), bty = "l")
+```
+
+# Modeling
+
+# Create 2 Partitions
+
+# Training set is from January 1990 - December 2019
+
+# Validation set is from January 2020 - September 2023
+
+```{r}
+train <- window(CA.ts, start = c(1990, 1), end = c(2019, 12))
+validation <- window(CA.ts, start = c(2020, 1))
+```
+
+```{r}
+autoplot(train) + 
+  autolayer(validation, color = "blue")
+```
+
+# Naive Model
+
+```{r}
+n_model <- naive(train, h = 5, level = 95)
+
+```
+
+# plot the Naive Model - Training set
+
+```{r}
+autoplot(train) + 
+  autolayer(n_model, color = "red", series = "Naive") +
+   autolayer(validation, color = "blue", series = "Actual")
+
+```
+
+# Seasonal Naive Model
+
+```{r}
+sn_model <- snaive(train, h = 5)
+```
+
+# plot the snaive Model - Training set
+
+```{r}
+autoplot(train) + 
+  autolayer(sn_model, color = "red", series = "Seasonal Naive") +
+   autolayer(validation, color = "blue", series = "Actual")
+
+```
+
+# Season and Trend
+
+```{r}
+st_model <- tslm(train ~ trend + season)
+
+summary(st_model)
+```
+
+```{r}
+st_forecast <- forecast(st_model, h=5)
+st_forecast
+```
+
+# plot the Season and Trend Model
+
+```{r}
+autoplot(train) + 
+  autolayer(st_forecast, color = "red", series = "season trend") +
+   autolayer(validation, color = "blue", series = "Actual")
+
+```
+
+# Determining the Error
+
+```{r}
+accuracy(st_forecast)
+accuracy(n_model)
+accuracy(sn_model)
+
+
+```
+
+```{r}
+mean(abs(n_model$residuals), na.rm = T) 
+```
+
+```{r}
+sqrt(mean(n_model$residuals^2, na.rm = T)) 
+```
+
+# Subset San Francisco Column
+
+```{r}
+extracted_SF <- Cali$San.Francisco
+# extracted_SF
+```
+
+```{r}
+head(extracted_SF)
+```
+
+Create Data Frame for Extracted CA column
+
+```{r}
+extracted_SF <- data.frame(San.Francisco = extracted_SF)
+```
+
+```{r}
+head(extracted_SF)
+```
+
+Find Min and Max Value
+
+```{r}
+min_value <- min(extracted_SF$San.Francisco)
+max_value <- max(extracted_SF$San.Francisco)
+
+
+cat("Minimum Value:", min_value, "\n")
+cat("Maximum Value:", max_value, "\n")
+
+```
+
+# Create Time Series Plot for San Francisco
+
+```{r}
+SF.ts <- ts(extracted_SF, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+```
+
+```{r}
+plot(SF.ts, 
+     main = "San Francisco Home Price Time Series",
+     xlab = "Mon-Yr",
+     ylab = "San Francisco",
+     type = "l", 
+     col = "blue")
+```
+
+```{r}
+plot(SF.ts, xlab = "Mon-Yr", ylab = "CA", ylim = c(240000, 2060000), bty = "l")
+```
+
+```{r}
+home_prices.lm <- tslm(SF.ts ~ trend + I(trend^2))
+par(mfrow = c(2,1))
+plot(SF.ts, xlab = "Time", ylab = "Shipments", ylim = c(240000, 2060000), bty = "l")
+lines(home_prices.lm$fitted, lwd = 2)
+SF.ts.zoom <- window(SF.ts, start = c(1990, 1), end = c(2023, 9))
+plot(SF.ts.zoom, xlab = "Mon-Yr", ylab = "CA", ylim = c(240000, 2060000), bty = "l")
+```
+
+```{r}
+ts.plot(CA.ts, SF.ts, gpars = list(col = c("blue", "red"), lty = c(1, 2)),
+        col.titles = c("Cali", "Random Series"),
+        main = "Time Series Plot for Multiple Variables")
+```
+
+# Discussion
+
+I think this data set is really interesting, it does show the huge drop in home prices that occurred after the recession that occurred in 2008-2010 and then a steady incline in home prices since then. Between 2013 and 2020, I think it does show some cyclic behavior that may indicate that there is seasonality present in the data set. I think this is common to see in home prices as we typically see more homes being sold in the summer months and that drops a bit in the winter. This was just looking at California as a whole but the data is provided by City as well so we could drill down to more specific locations to see what the trends are like for those as well. I do think a three month series would be adequate for producing forecasted home prices.
