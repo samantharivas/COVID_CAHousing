@@ -413,3 +413,78 @@ mean(abs(n_model$residuals), na.rm = T)
 ```{r}
 sqrt(mean(n_model$residuals^2, na.rm = T)) 
 ```
+
+## SARIMA model
+
+SARIMA models are used for time series data with clear seasonality and trends, and it includes components from seasonality, trend, and autoregression. It can capture complex seasonal patterns and trends in the data. It assumes that the future behavior of the time series depends linearly of its past values and past forecast errors. 
+
+```{r}
+# SARIMA model
+sarima_model <- auto.arima(train)
+sarima_forecast <- forecast(sarima_model, h = 57)
+
+# plot SARIMA model
+autoplot(train) + 
+  autolayer(sarima_forecast, color = "green", series = "SARIMA Forecast") +
+  autolayer(validation, color = "blue", series = "Actual")
+```
+
+## Theta Model
+
+Suitable for time series with no clear patterns, trends, or seasonality. The theta model involves a smoothing parameter (theta) to adjust for random fluctuations. They work well for time series that show irregular or random behavior. It may not perform well for data with strong seasonality or trend. 
+
+```{r}
+# Fit the Theta model
+theta_model <- thetaf(train)
+
+# Generate forecasts
+theta_forecast <- forecast(theta_model, h = 5)
+
+# Plot the forecast
+autoplot(theta_forecast)
+```
+## TBATS (Trigonometric, Box-Cox, ARMA errors, Trend and Seasonal) Model
+
+TBATS is an extension of seasonal decomposition of time series (STL) method and it can capture multiple seasonalities, long-term trends, and autoregressive components. 
+
+Trigonometric (T): Captures seasonality in the data using trigonometric functions. It's particularly useful when dealing with data that exhibits complex seasonal patterns.
+Box-Cox (B): Applies a Box-Cox transformation to stabilize the variance of the time series. This is especially beneficial when the variance of the data changes over time.
+ARMA Errors (A): Incorporates Autoregressive Moving Average (ARMA) components to model the autocorrelation structure in the residuals.
+Trend (T): Models the long-term trend in the data, allowing TBATS to handle data with both short-term seasonality and long-term trends.
+Seasonal (S): Represents the seasonal component of the time series. TBATS can handle multiple seasonal patterns, making it versatile for various types of data.
+
+TBATS is a flexible model that can adapt to different time series patterns and is particularly useful for datasets with multiple seasonalities and complex structures.
+
+```{r}
+# Fit the TBATS model
+tbats_model <- tbats(train)
+
+# Generate forecasts
+tbats_forecast <- forecast(tbats_model, h = 57)
+
+# Plot the forecast
+autoplot(tbats_forecast) +
+  autolayer(validation, color = "blue", series = "Actual")
+```
+
+## Evaluation Metrics
+
+```{r}
+# Evaluate accuracy
+sarima_accuracy <- accuracy(sarima_forecast)
+theta_accuracy <- accuracy(theta_forecast)
+tbats_accuracy <- accuracy(tbats_forecast)
+
+# Create a table
+accuracy_table <- data.frame(
+  Model = c("SARIMA", "Theta", "TBATS"),
+  RMSE = c(sarima_accuracy[1], theta_accuracy[1], tbats_accuracy[1]),
+  MAE = c(sarima_accuracy[2], theta_accuracy[2], tbats_accuracy[2]),
+  MAPE = c(sarima_accuracy[3], theta_accuracy[3], tbats_accuracy[3])
+)
+
+
+# Print the table
+print(accuracy_table)
+
+```
