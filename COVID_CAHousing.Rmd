@@ -341,15 +341,7 @@ autoplot(train) +
 ## Modeling
 
 
-```{r}
-train
-```
-
-
-## Modeling
-
-
-# Naive Model
+## Naive Model
 ```{r}
 n_model <- naive(train, h = 57)
 ```
@@ -368,7 +360,7 @@ summary(n_model)
 
 
 
-# Seasonal Naive Model
+## Seasonal Naive Model
 ```{r}
 sn_model <- snaive(train, h = 57)
 ```
@@ -382,7 +374,7 @@ autoplot(train) +
 ```
 
 
-# Season and Trend - Time Series Linear Model 
+## Season and Trend - Time Series Linear Model 
 
 ```{r}
 
@@ -466,6 +458,57 @@ autoplot(tbats_forecast) +
   autolayer(validation, color = "blue", series = "Actual")
 ```
 
+## ARIMA Model 
+```{r}
+# Fit an ARIMA model using the training set
+arima_model <- auto.arima(train)
+
+# Print the model summary
+print(summary(arima_model))
+
+# Forecast future values using the ARIMA model on the validation set
+arima_forecast <- forecast(arima_model, h = length(validation))  
+
+# Plot the original time series, fitted values, and forecast
+autoplot(CA_ts) +
+  autolayer(fitted(arima_model), series = "Fitted", color = "blue") +
+  autolayer(arima_forecast, series = "Forecast", color = "red") +
+  labs(title = "ARIMA Model Fitting and Forecasting", y = "CA Sales") +
+  theme_minimal()
+
+# Evaluate the forecast accuracy on the validation set
+accuracy(arima_forecast, validation)
+
+# Print the forecast values
+print(arima_forecast)
+
+```
+
+## ETS Model 
+```{r}
+# Fit an ETS model using the univariate time series
+ets_model <- ets(train)
+
+# Print the model summary
+print(summary(ets_model))
+
+# Forecast future values using the ETS model on the validation set
+ets_forecast <- forecast(ets_model, h = length(validation))  
+
+# Plot the original time series, fitted values, and forecast
+autoplot(CA_ts) +
+  autolayer(fitted(ets_model), series = "Fitted", color = "blue") +
+  autolayer(ets_forecast, series = "Forecast", color = "red") +
+  labs(title = "ETS Model Fitting and Forecasting", y = "CA Sales") +
+  theme_minimal()
+
+# Evaluate the forecast accuracy on the validation set
+accuracy(ets_forecast, validation)
+
+# Print the forecast values
+print(ets_forecast)
+```
+
 ## Evaluation Metrics
 
 ```{r}
@@ -476,13 +519,18 @@ tbats_accuracy <- accuracy(tbats_forecast)
 naive_accuracy <- accuracy(n_model)
 snaive_accuracy <- accuracy(sn_model)
 st_accuracy <- accuracy(st_forecast)
+arima_accuracy <- accuracy(arima_forecast)
+ets_accuracy <- accuracy(ets_forecast)
 
 # Create a table
 accuracy_table <- data.frame(
-  Model = c("SARIMA", "Theta", "TBATS", "Naive", "Seasonal_Naive", "Trend_Season"),
-  RMSE = c(sarima_accuracy[1], theta_accuracy[1], tbats_accuracy[1], naive_accuracy[1], snaive_accuracy[1], st_accuracy[1]),
-  MAE = c(sarima_accuracy[2], theta_accuracy[2], tbats_accuracy[2], naive_accuracy[2], snaive_accuracy[2], st_accuracy[2]),
-  MAPE = c(sarima_accuracy[3], theta_accuracy[3], tbats_accuracy[3], naive_accuracy[3], snaive_accuracy[3], st_accuracy[3])
+  Model = c("SARIMA", "Theta", "TBATS", "Naive", "Seasonal_Naive", "Trend_Season", "ARIMA", "ETS"),
+  RMSE = c(sarima_accuracy[1], theta_accuracy[1], tbats_accuracy[1], naive_accuracy[1], snaive_accuracy[1], st_accuracy[1],
+           arima_accuracy[1], ets_accuracy[1]),
+  MAE = c(sarima_accuracy[2], theta_accuracy[2], tbats_accuracy[2], naive_accuracy[2], snaive_accuracy[2], st_accuracy[2],
+          arima_accuracy[2], ets_accuracy[2]),
+  MAPE = c(sarima_accuracy[3], theta_accuracy[3], tbats_accuracy[3], naive_accuracy[3], snaive_accuracy[3], st_accuracy[3], 
+           arima_accuracy[3], ets_accuracy[3])
 )
 
 
