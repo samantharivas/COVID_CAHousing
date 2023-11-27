@@ -538,3 +538,238 @@ accuracy_table <- data.frame(
 print(accuracy_table)
 
 ```
+
+SARIMA is selected as the preferred time series model due to its competitive performance, demonstrated by the lowest Root Mean Squared Error (RMSE) and Mean Absolute Error (MAE) among the evaluated models. The SARIMA model's ability to capture both seasonality and autoregressive components allows it to provide accurate and reliable forecasts for the given time series data.
+
+## Model Application on 6 Counties (Riverside, Sacramento, Alameda, Santa Clara, Los Angeles, San Diego)
+
+### Riverside 
+```{r}
+# create a ts for Riverside County
+riv_ts <- ts(CA$Riverside, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+```
+
+```{r}
+# create training and validation set 
+train_riv <- window(riv_ts, start = c(2014, 1), end = c(2018, 12))
+validation_riv <- window(riv_ts, start = c(2019, 1))
+
+# fit SARIMA model on Riverside ts
+riv_sarima <- auto.arima(train_riv)
+
+# print the model summary
+print(summary(riv_sarima))
+```
+
+```{r}
+# forecast future values using the SARIMA model on the validation set - Riverside 
+riv_forecast <- forecast(riv_sarima, h = length(validation))  
+
+# plot the original time series, fitted values, and forecast
+autoplot(riv_ts) +
+  autolayer(fitted(riv_sarima), series = "Fitted", color = "blue") +
+  autolayer(riv_forecast, series = "Forecast", color = "red") +
+  labs(title = "SARIMA Model Fitting and Forecasting - Riverside", y = "Riverside Sales") +
+  theme_minimal()
+```
+
+``` {r}
+# Evaluate the forecast accuracy on the validation set
+accuracy(riv_forecast, validation)
+
+# Print the forecast values
+print(riv_forecast)
+```
+
+### Sacramento
+```{r}
+# create a ts for Sacramento County
+sac_ts <- ts(CA$Sacramento, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+```
+
+```{r}
+# create training and validation set 
+train_sac <- window(sac_ts, start = c(2014, 1), end = c(2018, 12))
+validation_sac <- window(sac_ts, start = c(2019, 1))
+
+# fit SARIMA model on Sacramento ts
+sac_sarima <- auto.arima(train_sac)
+
+# print the model summary
+print(summary(sac_sarima))
+```
+
+```{r}
+# forecast future values using the SARIMA model on the validation set - Sacramento
+sac_forecast <- forecast(sac_sarima, h = length(validation))  
+
+# plot the original time series, fitted values, and forecast
+autoplot(sac_ts) +
+  autolayer(fitted(sac_sarima), series = "Fitted", color = "blue") +
+  autolayer(sac_forecast, series = "Forecast", color = "red") +
+  labs(title = "SARIMA Model Fitting and Forecasting - Sacramento", y = "Sacramento Sales") +
+  theme_minimal()
+```
+
+``` {r}
+# Evaluate the forecast accuracy on the validation set
+accuracy(sac_forecast, validation)
+
+# Print the forecast values
+print(sac_forecast)
+```
+ 
+### Alameda
+ 
+```{r}
+# create a ts for Alameda County
+al_ts <- ts(CA$Alameda, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+```
+
+```{r}
+# create training and validation set 
+train_al <- window(al_ts, start = c(2014, 1), end = c(2018, 12))
+validation_al <- window(al_ts, start = c(2019, 1))
+
+# fit SARIMA model on Alameda ts
+al_sarima <- auto.arima(train_al)
+
+# print the model summary
+print(summary(al_sarima))
+```
+
+```{r}
+# forecast future values using the SARIMA model on the validation set - Alameda
+al_forecast <- forecast(al_sarima, h = length(validation))  
+
+# plot the original time series, fitted values, and forecast
+autoplot(al_ts) +
+  autolayer(fitted(al_sarima), series = "Fitted", color = "blue") +
+  autolayer(al_forecast, series = "Forecast", color = "red") +
+  labs(title = "SARIMA Model Fitting and Forecasting - Alameda", y = "Alameda Sales") +
+  theme_minimal()
+```
+
+``` {r}
+# Evaluate the forecast accuracy on the validation set
+accuracy(al_forecast, validation)
+
+# Print the forecast values
+print(al_forecast)
+```
+
+### Santa Clara 
+ 
+```{r}
+# create a ts for Santa Clara  County
+sc_ts <- ts(CA$`Santa Clara`, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+```
+
+```{r}
+# create training and validation set 
+train_sc <- window(sc_ts, start = c(2014, 1), end = c(2018, 12))
+validation_sc <- window(sc_ts, start = c(2019, 1))
+
+# fit SARIMA model on Alameda ts
+sc_sarima <- auto.arima(train_sc)
+
+# print the model summary
+print(summary(sc_sarima))
+```
+
+```{r}
+# forecast future values using the SARIMA model on the validation set - Santa Clara
+sc_forecast <- forecast(sc_sarima, h = length(validation))  
+
+# plot the original time series, fitted values, and forecast
+autoplot(sc_ts) +
+  autolayer(fitted(sc_sarima), series = "Fitted", color = "blue") +
+  autolayer(sc_forecast, series = "Forecast", color = "red") +
+  labs(title = "SARIMA Model Fitting and Forecasting - Santa Clara", y = "Santa Clara Sales") +
+  theme_minimal()
+```
+
+``` {r}
+# Evaluate the forecast accuracy on the validation set
+accuracy(sc_forecast, validation)
+
+# Print the forecast values
+print(sc_forecast)
+```
+ 
+### Los Angeles
+ 
+```{r}
+# create a ts for Los Angeles County
+la_ts <- ts(CA$Alameda, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+```
+
+```{r}
+# create training and validation set 
+train_la <- window(la_ts, start = c(2014, 1), end = c(2018, 12))
+validation_la <- window(la_ts, start = c(2019, 1))
+
+# fit SARIMA model on Los Angeles ts
+la_sarima <- auto.arima(train_la)
+
+# print the model summary
+print(summary(la_sarima))
+```
+
+```{r}
+# forecast future values using the SARIMA model on the validation set - Los Angeles
+la_forecast <- forecast(la_sarima, h = length(validation))  
+
+# plot the original time series, fitted values, and forecast
+autoplot(la_ts) +
+  autolayer(fitted(la_sarima), series = "Fitted", color = "blue") +
+  autolayer(la_forecast, series = "Forecast", color = "red") +
+  labs(title = "SARIMA Model Fitting and Forecasting - Los Angeles", y = "Los Amgeles Sales") +
+  theme_minimal()
+```
+
+``` {r}
+# Evaluate the forecast accuracy on the validation set
+accuracy(la_forecast, validation)
+
+# Print the forecast values
+print(la_forecast)
+```
+ 
+### San Diego 
+```{r}
+# create a ts for San Diego County
+sd_ts <- ts(CA$`San Diego`, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+```
+
+```{r}
+# create training and validation set 
+train_sd <- window(sd_ts, start = c(2014, 1), end = c(2018, 12))
+validation_sd <- window(sd_ts, start = c(2019, 1))
+
+# fit SARIMA model on San Diego ts
+sd_sarima <- auto.arima(train_sd)
+
+# print the model summary
+print(summary(sd_sarima))
+```
+
+```{r}
+# forecast future values using the SARIMA model on the validation set - San Diego
+sd_forecast <- forecast(sd_sarima, h = length(validation))  
+
+# plot the original time series, fitted values, and forecast
+autoplot(sd_ts) +
+  autolayer(fitted(sd_sarima), series = "Fitted", color = "blue") +
+  autolayer(sd_forecast, series = "Forecast", color = "red") +
+  labs(title = "SARIMA Model Fitting and Forecasting - San Diego", y = "San Diego Sales") +
+  theme_minimal()
+```
+
+``` {r}
+# Evaluate the forecast accuracy on the validation set
+accuracy(sd_forecast, validation)
+
+# Print the forecast values
+print(sd_forecast)
+```
