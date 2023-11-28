@@ -411,7 +411,7 @@ SARIMA models are used for time series data with clear seasonality and trends, a
 
 ```{r}
 # SARIMA model
-sarima_model <- auto.arima(train)
+sarima_model <- auto.arima(train, seasonal = TRUE)
 sarima_forecast <- forecast(sarima_model, h = 57)
 
 # plot SARIMA model
@@ -461,7 +461,7 @@ autoplot(tbats_forecast) +
 ## ARIMA Model 
 ```{r}
 # Fit an ARIMA model using the training set
-arima_model <- auto.arima(train)
+arima_model <- auto.arima(train, seasonal = FALSE)
 
 # Print the model summary
 print(summary(arima_model))
@@ -555,7 +555,7 @@ train_riv <- window(riv_ts, start = c(2014, 1), end = c(2018, 12))
 validation_riv <- window(riv_ts, start = c(2019, 1))
 
 # fit SARIMA model on Riverside ts
-riv_sarima <- auto.arima(train_riv)
+riv_sarima <- auto.arima(train_riv, seasonal = TRUE)
 
 # print the model summary
 print(summary(riv_sarima))
@@ -593,7 +593,7 @@ train_sac <- window(sac_ts, start = c(2014, 1), end = c(2018, 12))
 validation_sac <- window(sac_ts, start = c(2019, 1))
 
 # fit SARIMA model on Sacramento ts
-sac_sarima <- auto.arima(train_sac)
+sac_sarima <- auto.arima(train_sac, seasonal = TRUE)
 
 # print the model summary
 print(summary(sac_sarima))
@@ -632,7 +632,7 @@ train_al <- window(al_ts, start = c(2014, 1), end = c(2018, 12))
 validation_al <- window(al_ts, start = c(2019, 1))
 
 # fit SARIMA model on Alameda ts
-al_sarima <- auto.arima(train_al)
+al_sarima <- auto.arima(train_al, seasonal = TRUE)
 
 # print the model summary
 print(summary(al_sarima))
@@ -670,8 +670,8 @@ sc_ts <- ts(CA$`Santa Clara`, frequency = 12, start = c(1990, 1), end = c(2023, 
 train_sc <- window(sc_ts, start = c(2014, 1), end = c(2018, 12))
 validation_sc <- window(sc_ts, start = c(2019, 1))
 
-# fit SARIMA model on Alameda ts
-sc_sarima <- auto.arima(train_sc)
+# fit SARIMA model on Santa Clara ts
+sc_sarima <- auto.arima(train_sc, seasonal = TRUE)
 
 # print the model summary
 print(summary(sc_sarima))
@@ -701,7 +701,7 @@ print(sc_forecast)
  
 ```{r}
 # create a ts for Los Angeles County
-la_ts <- ts(CA$Alameda, frequency = 12, start = c(1990, 1), end = c(2023, 9))
+la_ts <- ts(CA$`Los Angeles`, frequency = 12, start = c(1990, 1), end = c(2023, 9))
 ```
 
 ```{r}
@@ -710,7 +710,7 @@ train_la <- window(la_ts, start = c(2014, 1), end = c(2018, 12))
 validation_la <- window(la_ts, start = c(2019, 1))
 
 # fit SARIMA model on Los Angeles ts
-la_sarima <- auto.arima(train_la)
+la_sarima <- auto.arima(train_la, seasonal = TRUE)
 
 # print the model summary
 print(summary(la_sarima))
@@ -748,7 +748,7 @@ train_sd <- window(sd_ts, start = c(2014, 1), end = c(2018, 12))
 validation_sd <- window(sd_ts, start = c(2019, 1))
 
 # fit SARIMA model on San Diego ts
-sd_sarima <- auto.arima(train_sd)
+sd_sarima <- auto.arima(train_sd, seasonal = TRUE)
 
 # print the model summary
 print(summary(sd_sarima))
