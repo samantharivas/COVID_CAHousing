@@ -558,7 +558,7 @@ theta_accuracy <- accuracy(theta_forecast)
 tbats_accuracy <- accuracy(tbats_forecast)
 naive_accuracy <- accuracy(n_forecast)
 snaive_accuracy <- accuracy(sn_forecast)
-st_accuracy <- accuracy(st_forecast)
+st_accuracy <- accuracy(stl_forecast)
 arima_accuracy <- accuracy(arima_forecast)
 ets_accuracy <- accuracy(ets_forecast)
 
