@@ -2,7 +2,7 @@
 
 ## COVID-19 Impact on California Housing Market
 
-This study embarks on an exploration of the intricate effects of the pandemic on the housing markets, aiming to provide a comprehensive understanding of its impact on California home prices. The complex interplay between public health measures, policy interventions, and technological advancements and its effects on the housing market are unraveled.
+This research embarks on an exploration of the intricate effects of the pandemic on the housing markets, aiming to provide a comprehensive understanding of its impact on California home prices. The complex interplay between public health measures, policy interventions, and technological advancements and its effects on the housing market are unraveled.
 
 The primary objective of this study is to analyze the impact of the COVID-19 pandemic on California home prices by creating a forecasting model using both statewide and county-level data.  The current state reveals a real estate sector navigating through economic uncertainties, influenced by fluctuations in market conditions, government interventions, and evolving consumer preferences. A macro-level view is captured through the statewide average home price, while a more comprehensive understanding is gained by individual county-level data.
 
