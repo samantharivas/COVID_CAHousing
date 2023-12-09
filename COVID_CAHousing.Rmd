@@ -1,7 +1,7 @@
 ---
-title: "COVID_CAHOUSING"
+title: "Impact Assessment on California Home Prices Post COVID-19"
 output: pdf_document
-date: "2023-11-16"
+date: "December 11th, 2023"
 ---
 
 # Effect of COVID on California Housing Prices (1990-2023)
@@ -15,7 +15,7 @@ GitHub link: <https://github.com/samantharivas/COVID_CAHousing.git>
 ## Import Libraries
 
 ```{r, message=FALSE, warning=FALSE}
-# import necessary libaries 
+# import necessary libraries 
 library(tidyverse)
 library(fpp3)
 library(gridExtra)
@@ -56,7 +56,7 @@ home_prices
 str(home_prices) # df consists of numeric and character values 
 ```
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # convert columns to correct data type 
 
 # specify the columns labeled as character to convert to numeric
