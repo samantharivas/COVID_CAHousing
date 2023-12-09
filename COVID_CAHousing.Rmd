@@ -14,7 +14,7 @@ GitHub link: <https://github.com/samantharivas/COVID_CAHousing.git>
 
 ## Import Libraries
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # import necessary libaries 
 library(tidyverse)
 library(fpp3)
@@ -97,7 +97,7 @@ print(home_prices)
 ```
 
 ```{r}
-# make a subset df removing condo, LA metro, Central Coast, Central Valley, Far North, Inland Empire, and S.F. Bay Area 
+# create a subset df removing condo, LA metro, Central Coast, Central Valley, Far North, Inland Empire, and S.F. Bay Area 
 regions_to_exclude <- c("Condo", "LA Metro", "Central Coast", "Central Valley", "Far North", "Inland Empire", "S.F. Bay Area", "SoCal")
 
 home_prices <- home_prices[, !(colnames(home_prices) %in% regions_to_exclude)]
@@ -131,6 +131,8 @@ for (col in numeric_columns) {
 
 ```
 
+Outliers in home prices reflect real-world variability and unique market conditions, such as COVID-19 and the Great Recession. The real estate market in Califronia is known for its diversity and experiences extreme fluctuations due to economic trends, population growth, and regional influences. Thus, keeping outliers allows for differnt variations to be captured and is crucial for understanding market trends.
+
 ```{r}
 # check for missing values 
 missing_values <- colSums(is.na(home_prices))
@@ -142,17 +144,17 @@ missing_percentage <- missing_percentage[order(-missing_percentage)]
 missing_percentage
 ```
 
-We decided to drop columns that data was more than 15% missing to maintain data integrity.
+We decided to drop columns that data was more than 15% missing to maintain data integrity and perserve information. It helps ensure a more reliable foundation.
 
 ```{r}
-# identify columns with more than 50% missing values
+# identify columns with more than 15% missing values
 columns_to_drop <- names(missing_percentage[missing_percentage > 15])
 
 # print columns with more than 15% missing values
 cat("Columns with More than 15% Missing Values:\n")
 cat(columns_to_drop, sep = ", ")
 
-# drop the identified columns with more than 50% missing values from the DataFrame
+# drop the identified columns with more than 15% missing values from the df
 home_prices <- home_prices[, !(names(home_prices) %in% columns_to_drop)]
 
 ```
@@ -170,6 +172,8 @@ skewness_values_imp <- moments::skewness(numeric_columns_imp, na.rm = TRUE)
 
 print(skewness_values_imp)
 ```
+
+Imputing missing values with the mean helps maintain data integrity by providing a simple and straightforward way to fill gaps in the dataset, retaining data integrity.
 
 ```{r}
 # calculate skewness of original df 
@@ -192,6 +196,8 @@ skewness_all <- data.frame(
 skewness_all
 ```
 
+Since the skewness of the data values before and after imputation it indicates the imputation had little no no impact on the distribution the data.
+
 ```{r}
 summary(home_prices_imp)
 ```
@@ -209,6 +215,7 @@ decomposed <- decompose(ts(home_prices_imp$CA, frequency = 12))
 autoplot(decomposed) +
   labs(title = "Seasonal Decomposition")
 ```
+
 ```{r}
 plot(home_prices_imp$CA, type = "l", main = "Time Series Plot")
 
@@ -253,9 +260,11 @@ home_prices_imp
 ```
 
 ```{r}
+# ACF/pacf on CA column 
 ACF <- acf(home_prices_imp$CA, lag.max = 50)
 pacf <- pacf(home_prices_imp$CA, lag.max = 50)
 ```
+
 ```{r}
 # remove missing values 
 clean_diff<- na.omit(home_prices_imp$deseasonalized_diff)
@@ -276,6 +285,7 @@ ggplot(home_prices_imp, aes(x = date, y = CA)) +
   scale_color_manual(values = c("Actual Sales" = "blue", "MA" = "red")) + 
   theme_minimal()
 ```
+
 ```{r}
 home_prices_imp
 ```
@@ -297,7 +307,7 @@ CA
 CA_ts <- ts(CA$CA, frequency = 12, start = c(1990, 1), end = c(2023, 9))
 ```
 
-## Feature Enginering 
+## Feature Engineering
 
 ```{r}
 # create additional lag features
@@ -325,7 +335,7 @@ CA$CA_log <- log(CA$CA + 1)
 ## Train-Test Split
 
 ```{r}
-# Create 2 Partitions
+# create partitions
 
 # Training set is from January 2014- December 2018
 # Validation set is from January 2019 - September 2023
@@ -340,74 +350,93 @@ autoplot(train) +
 
 ## Modeling
 
-
 ## Naive Model
+
+The naive model provides a simple and intuitive baseline for comparison against more complex forecasting methods. It works as a benchmark. The approach is based on the assumption that future values of the time series analysis will be equal to the most recent observed values.
+
 ```{r}
+# build naive model 
 n_model <- naive(train, h = 57)
+
+# forecast values 
+n_forecast <- forecast(n_model, h = length(validation))  
+n_forecast
 ```
 
 ```{r}
 # plot the Naive Model - Training set
 autoplot(train) + 
-  autolayer(n_model, color = "red", series = "Naive") +
+  autolayer(n_forecast, color = "red", series = "Naive Forecast") +
    autolayer(validation, color = "blue", series = "Actual")
 
 ```
 
 ```{r}
+# metrics for naive model 
 summary(n_model)
 ```
 
-
-
 ## Seasonal Naive Model
+
+The seasonal naive model is a variant of the naive model, designed to address repeating seasonal pattern. The model's prediction is based on the observed values from the same season in previous cycles. The seasonal naive model is particularly useful when the data exhibits a predictable pattern over time. Similar to the naive model, the seasonal naive model assumes the pattern will continue unchanged over time.
+
 ```{r}
+# build seasonal naive model 
 sn_model <- snaive(train, h = 57)
+
+# forecast values 
+sn_forecast <- forecast(sn_model, h = length(validation)) 
+sn_forecast
 ```
 
 ```{r}
-# plot the naive Model - Training set
+# plot the seasonal naive Model - Training set
 autoplot(train) + 
-  autolayer(sn_model, color = "red", series = "Seasonal Naive") +
+  autolayer(sn_forecast, color = "red", series = "Seasonal Naive Forecast") +
    autolayer(validation, color = "blue", series = "Actual")
-
-```
-
-
-## Season and Trend - Time Series Linear Model 
-
-```{r}
-
-st_model <- tslm(train ~ trend + season)
-
-summary(st_model)
 ```
 
 ```{r}
-st_forecast <- forecast(st_model, h=57)
-st_forecast
+# metrics for seasonal naive model 
+summary(sn_model)
+```
+
+## Season and Trend - Time Series Linear Model
+
+The seasonal and trend decomposition (STL) separates a time series in three components: seasonality, trend and residuals. The model captures underlying patterns within the data. the model helps understand the individual contributions of seasonality, trend, and residual to allow for a more accurate forecasting.
+
+```{r}
+# build STL model
+stl_model <- tslm(train ~ trend + season)
+
+# metrics for STL model 
+summary(stl_model)
+```
+
+```{r}
+# forecast STL
+stl_forecast <- forecast(stl_model, h=57)
+stl_forecast
 ```
 
 ```{r}
 # plot the Season and Trend Model
 autoplot(train) + 
-  autolayer(st_forecast, color = "red", series = "season trend") +
+  autolayer(stl_forecast, color = "red", series = "season trend") +
    autolayer(validation, color = "blue", series = "Actual")
 
 ```
 
 ```{r}
-# Determining the Error
+# determining error between the three models (Naive, Seasonal Naive, STL)
 accuracy(n_model)
 accuracy(sn_model)
-accuracy(st_forecast)
+accuracy(stl_model)
 ```
-
-
 
 ## SARIMA model
 
-SARIMA models are used for time series data with clear seasonality and trends, and it includes components from seasonality, trend, and autoregression. It can capture complex seasonal patterns and trends in the data. It assumes that the future behavior of the time series depends linearly of its past values and past forecast errors. 
+SARIMA models are used for time series data with clear seasonality and trends, and it includes components from seasonality, trend, and autoregression. It can capture complex seasonal patterns and trends in the data. It assumes that the future behavior of the time series depends linearly of its past values and past forecast errors.
 
 ```{r}
 # SARIMA model
@@ -422,7 +451,7 @@ autoplot(train) +
 
 ## Theta Model
 
-Suitable for time series with no clear patterns, trends, or seasonality. The theta model involves a smoothing parameter (theta) to adjust for random fluctuations. They work well for time series that show irregular or random behavior. It may not perform well for data with strong seasonality or trend. 
+Suitable for time series with no clear patterns, trends, or seasonality. The theta model involves a smoothing parameter (theta) to adjust for random fluctuations. They work well for time series that show irregular or random behavior. It may not perform well for data with strong seasonality or trend.
 
 ```{r}
 # Fit the Theta model
@@ -434,15 +463,12 @@ theta_forecast <- forecast(theta_model, h = 5)
 # Plot the forecast
 autoplot(theta_forecast)
 ```
+
 ## TBATS (Trigonometric, Box-Cox, ARMA errors, Trend and Seasonal) Model
 
-TBATS is an extension of seasonal decomposition of time series (STL) method and it can capture multiple seasonalities, long-term trends, and autoregressive components. 
+TBATS is an extension of seasonal decomposition of time series (STL) method and it can capture multiple seasonalities, long-term trends, and autoregressive components.
 
-Trigonometric (T): Captures seasonality in the data using trigonometric functions. It's particularly useful when dealing with data that exhibits complex seasonal patterns.
-Box-Cox (B): Applies a Box-Cox transformation to stabilize the variance of the time series. This is especially beneficial when the variance of the data changes over time.
-ARMA Errors (A): Incorporates Autoregressive Moving Average (ARMA) components to model the autocorrelation structure in the residuals.
-Trend (T): Models the long-term trend in the data, allowing TBATS to handle data with both short-term seasonality and long-term trends.
-Seasonal (S): Represents the seasonal component of the time series. TBATS can handle multiple seasonal patterns, making it versatile for various types of data.
+Trigonometric (T): Captures seasonality in the data using trigonometric functions. It's particularly useful when dealing with data that exhibits complex seasonal patterns. Box-Cox (B): Applies a Box-Cox transformation to stabilize the variance of the time series. This is especially beneficial when the variance of the data changes over time. ARMA Errors (A): Incorporates Autoregressive Moving Average (ARMA) components to model the autocorrelation structure in the residuals. Trend (T): Models the long-term trend in the data, allowing TBATS to handle data with both short-term seasonality and long-term trends. Seasonal (S): Represents the seasonal component of the time series. TBATS can handle multiple seasonal patterns, making it versatile for various types of data.
 
 TBATS is a flexible model that can adapt to different time series patterns and is particularly useful for datasets with multiple seasonalities and complex structures.
 
@@ -458,73 +484,87 @@ autoplot(tbats_forecast) +
   autolayer(validation, color = "blue", series = "Actual")
 ```
 
-## ARIMA Model 
+## ARIMA Model
+
+ARIMA (AutoRegressive Integrated Moving Average) consist of three components: autoregressive, integrated, and moving average. AutoRegressive represents the relationship between current and previous observations, capturing the impact of values. Integrated refers to differencing, making the time series data stationary by removing trend and/or seasonality. Moving average models the relationship between current observations and residual error based on the moving average from previous observations, allowing for short-term observations to be captures.
+
 ```{r}
-# Fit an ARIMA model using the training set
+# fit ARIMA on trainning df 
 arima_model <- auto.arima(train, seasonal = FALSE)
 
-# Print the model summary
+# print summary 
 print(summary(arima_model))
 
-# Forecast future values using the ARIMA model on the validation set
+# forecast values 
 arima_forecast <- forecast(arima_model, h = length(validation))  
+```
 
-# Plot the original time series, fitted values, and forecast
+```{r}
+# plot ARIMA 
 autoplot(CA_ts) +
   autolayer(fitted(arima_model), series = "Fitted", color = "blue") +
   autolayer(arima_forecast, series = "Forecast", color = "red") +
   labs(title = "ARIMA Model Fitting and Forecasting", y = "CA Sales") +
   theme_minimal()
+```
 
-# Evaluate the forecast accuracy on the validation set
+```{r}
+# evaluate forecast accuracy 
 accuracy(arima_forecast, validation)
 
-# Print the forecast values
+# forecast 
 print(arima_forecast)
 
 ```
 
-## ETS Model 
+## ETS Model
+
+The ETS (Error-Trend Seasonality) model is a forecasting method that models underlying components of the data. It captures three elements: error (residuals in the data), trend (long term movement/direction of the data) and seasonality (repeating patterns/intervals). It selects the best fitting model based on the selected data.
+
 ```{r}
-# Fit an ETS model using the univariate time series
+#fit ETS model
 ets_model <- ets(train)
 
-# Print the model summary
+# summary of ETS
 print(summary(ets_model))
 
-# Forecast future values using the ETS model on the validation set
+# ETS forecast 
 ets_forecast <- forecast(ets_model, h = length(validation))  
+```
 
-# Plot the original time series, fitted values, and forecast
+```{r}
+# plot ETS
 autoplot(CA_ts) +
   autolayer(fitted(ets_model), series = "Fitted", color = "blue") +
   autolayer(ets_forecast, series = "Forecast", color = "red") +
   labs(title = "ETS Model Fitting and Forecasting", y = "CA Sales") +
   theme_minimal()
+```
 
-# Evaluate the forecast accuracy on the validation set
+```{r}
+# evaluate accuracy 
 accuracy(ets_forecast, validation)
 
-# Print the forecast values
+#  forecast values
 print(ets_forecast)
 ```
 
 ## Evaluation Metrics
 
 ```{r}
-# Evaluate accuracy
+# evaluate accuracy
 sarima_accuracy <- accuracy(sarima_forecast)
 theta_accuracy <- accuracy(theta_forecast)
 tbats_accuracy <- accuracy(tbats_forecast)
-naive_accuracy <- accuracy(n_model)
-snaive_accuracy <- accuracy(sn_model)
+naive_accuracy <- accuracy(n_forecast)
+snaive_accuracy <- accuracy(sn_forecast)
 st_accuracy <- accuracy(st_forecast)
 arima_accuracy <- accuracy(arima_forecast)
 ets_accuracy <- accuracy(ets_forecast)
 
-# Create a table
+# create a table
 accuracy_table <- data.frame(
-  Model = c("SARIMA", "Theta", "TBATS", "Naive", "Seasonal_Naive", "Trend_Season", "ARIMA", "ETS"),
+  Model = c("SARIMA", "Theta", "TBATS", "Naive", "Seasonal Naive", "STL", "ARIMA", "ETS"),
   RMSE = c(sarima_accuracy[1], theta_accuracy[1], tbats_accuracy[1], naive_accuracy[1], snaive_accuracy[1], st_accuracy[1],
            arima_accuracy[1], ets_accuracy[1]),
   MAE = c(sarima_accuracy[2], theta_accuracy[2], tbats_accuracy[2], naive_accuracy[2], snaive_accuracy[2], st_accuracy[2],
@@ -534,16 +574,146 @@ accuracy_table <- data.frame(
 )
 
 
-# Print the table
+# print the table
 print(accuracy_table)
 
 ```
 
-SARIMA is selected as the preferred time series model due to its competitive performance, demonstrated by the lowest Root Mean Squared Error (RMSE) and Mean Absolute Error (MAE) among the evaluated models. The SARIMA model's ability to capture both seasonality and autoregressive components allows it to provide accurate and reliable forecasts for the given time series data.
+```{r}
+# convert accuracy table to long format 
+accuracy_long <- tidyr::gather(accuracy_table, Metric, Value, -Model)
 
-## Model Application on 6 Counties (Riverside, Sacramento, Alameda, Santa Clara, Los Angeles, San Diego)
+# plot the bar graph
+ggplot(accuracy_long, aes(x = Model, y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Accuracy Comparison of Time Series Models",
+       x = "Model",
+       y = "Accuracy Value") +
+  scale_fill_manual(values = c("RMSE" = "blue", "MAE" = "green", "MAPE" = "orange")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
 
-### Riverside 
+```{r}
+# plot original time series
+plot <- autoplot(CA_ts, series = "Actual")
+
+# add each model as a layer (fitted and forecast)
+plot <- plot +
+  autolayer(fitted(n_model), series = "Naive Fitted") +
+  autolayer(fitted(sn_model), series = "Seasonal Naive Fitted") +
+  autolayer(fitted(stl_model), series = "Seasonal Trend Fitted") +
+  autolayer(fitted(sarima_model), series = "SARIMA Fitted") +
+  autolayer(fitted(theta_model), series = "Theta Fitted") +
+  autolayer(fitted(tbats_model), series = "TBATS Fitted") +
+  autolayer(fitted(arima_model), series = "ARIMA Fitted") +
+  autolayer(fitted(ets_model), series = "ETS Fitted") +
+  autolayer(n_forecast, series = "Naive Forecast") +
+  autolayer(sn_forecast, series = "Seasonal Naive Forecast") +
+  autolayer(stl_forecast, series = "Seasonal Trend Forecast") +
+  autolayer(sarima_forecast, series = "SARIMA Forecast") +
+  autolayer(theta_forecast, series = "Theta Forecast") +
+  autolayer(tbats_forecast, series = "TBATS Forecast") + 
+  autolayer(arima_forecast, series = "ARIMA Forecast", PI = FALSE) +
+  autolayer(ets_forecast, series = "ETS Forecast") 
+
+# plot models 
+plot +
+  guides(color = guide_legend(title = "Series")) +
+  scale_color_manual(values = c(
+    Actual = "black",
+    Naive = "red",
+    `Seasonal Naive Fitted` = "orange",
+    `Seasonal Trend Fitted` = "yellow",
+    `SARIMA Fitted` = "green",
+    `Theta Fitted` = "blue",
+    `TBATS Fitted` = "purple",
+    `ARIMA Fitted` = "pink",
+    `ETS Fitted` = "brown",
+    `Naive Forecast` = "red",
+    `Seasonal Naive Forecast` = "orange",
+    `Seasonal Trend Forecast` = "yellow",
+    `SARIMA Forecast` = "green",
+    `Theta Forecast` = "blue",
+    `TBATS Forecast` = "purple",
+    `ARIMA Forecast` = "pink",
+    `ETS Forecast` = "brown"
+  )) +
+  theme_classic() +
+  theme(legend.position = "top") +
+  coord_cartesian(xlim = c(2008, NA)) +
+  labs(title = "Fitted and Forecast Values of All Models")
+
+```
+
+```{r}
+# fitted values plot
+plot_fitted <- autoplot(CA_ts, series = "Actual") +
+  autolayer(fitted(n_model), series = "Naive Fitted") +
+  autolayer(fitted(sn_model), series = "Seasonal Naive Fitted") +
+  autolayer(fitted(stl_model), series = "Seasonal Trend Fitted") +
+  autolayer(fitted(sarima_model), series = "SARIMA Fitted") +
+  autolayer(fitted(theta_model), series = "Theta Fitted") +
+  autolayer(fitted(tbats_model), series = "TBATS Fitted") +
+  autolayer(fitted(arima_model), series = "ARIMA Fitted") +
+  autolayer(fitted(ets_model), series = "ETS Fitted") +
+  guides(color = guide_legend(title = "Series")) +
+  scale_color_manual(values = c(
+    Actual = "black",
+    Naive = "red",
+    `Seasonal Naive Fitted` = "orange",
+    `Seasonal Trend Fitted` = "yellow",
+    `SARIMA Fitted` = "green",
+    `Theta Fitted` = "blue",
+    `TBATS Fitted` = "purple",
+    `ARIMA Fitted` = "pink",
+    `ETS Fitted` = "brown"
+  )) +
+  theme_classic() +
+  theme(legend.position = "top") +
+  coord_cartesian(xlim = c(2014, 2019)) +
+  labs(title = "Fitted Values of All Models")
+
+# forecast values plot
+plot_forecast <- autoplot(CA_ts, series = "Actual") +
+  autolayer(n_forecast, series = "Naive Forecast") +
+  autolayer(sn_forecast, series = "Seasonal Naive Forecast") +
+  autolayer(stl_forecast, series = "Seasonal Trend Forecast") +
+  autolayer(sarima_forecast, series = "SARIMA Forecast") +
+  autolayer(theta_forecast, series = "Theta Forecast") +
+  autolayer(tbats_forecast, series = "TBATS Forecast") +
+  autolayer(arima_forecast, series = "ARIMA Forecast", PI = FALSE) +
+  autolayer(ets_forecast, series = "ETS Forecast") +
+  guides(color = guide_legend(title = "Series")) +
+  scale_color_manual(values = c(
+    Actual = "black",
+    `Naive Forecast` = "red",
+    `Seasonal Naive Forecast` = "orange",
+    `Seasonal Trend Forecast` = "yellow",
+    `SARIMA Forecast` = "green",
+    `Theta Forecast` = "blue",
+    `TBATS Forecast` = "purple",
+    `ARIMA Forecast` = "pink",
+    `ETS Forecast` = "brown"
+  )) +
+  theme_classic() +
+  theme(legend.position = "top") +
+  coord_cartesian(xlim = c(2019, NA)) +
+  labs(title = "Forecast Values of All Models")
+
+print(plot_fitted)
+print(plot_forecast)
+
+```
+
+SARIMA is selected as the preferred time series model due to its competitive performance, demonstrated by the lowest Root Mean Squared Error (RMSE) and Mean Absolute Error (MAE) among the evaluated models. The SARIMA model's ability to capture both seasonality and auto regressive components allows it to provide accurate and reliable forecasts for the given time series data.
+
+## SARIMA Model Application 
+
+The SARIMA model is applied to 6 random counties ((Riverside, Sacramento, Alameda, Santa Clara, Los Angeles, San Diego)) to see if the pandemic had an impact on home prices within the specific county.
+
+### Riverside
+
 ```{r}
 # create a ts for Riverside County
 riv_ts <- ts(CA$Riverside, frequency = 12, start = c(1990, 1), end = c(2023, 9))
@@ -565,7 +735,7 @@ print(summary(riv_sarima))
 # forecast future values using the SARIMA model on the validation set - Riverside 
 riv_forecast <- forecast(riv_sarima, h = length(validation))  
 
-# plot the original time series, fitted values, and forecast
+# plot SARIMA - Riverside 
 autoplot(riv_ts) +
   autolayer(fitted(riv_sarima), series = "Fitted", color = "blue") +
   autolayer(riv_forecast, series = "Forecast", color = "red") +
@@ -573,15 +743,18 @@ autoplot(riv_ts) +
   theme_minimal()
 ```
 
-``` {r}
-# Evaluate the forecast accuracy on the validation set
+From the graph we can conclude the pandemic had an impact on home prices in Riveride county.
+
+```{r}
+# evaluate forecast accuracy on validation set
 accuracy(riv_forecast, validation)
 
-# Print the forecast values
+# forecast values
 print(riv_forecast)
 ```
 
 ### Sacramento
+
 ```{r}
 # create a ts for Sacramento County
 sac_ts <- ts(CA$Sacramento, frequency = 12, start = c(1990, 1), end = c(2023, 9))
@@ -600,10 +773,10 @@ print(summary(sac_sarima))
 ```
 
 ```{r}
-# forecast future values using the SARIMA model on the validation set - Sacramento
+# forecast future values using SARIMA model on validation set - Sacramento
 sac_forecast <- forecast(sac_sarima, h = length(validation))  
 
-# plot the original time series, fitted values, and forecast
+# plot SARIMA - Sacramento
 autoplot(sac_ts) +
   autolayer(fitted(sac_sarima), series = "Fitted", color = "blue") +
   autolayer(sac_forecast, series = "Forecast", color = "red") +
@@ -611,16 +784,18 @@ autoplot(sac_ts) +
   theme_minimal()
 ```
 
-``` {r}
-# Evaluate the forecast accuracy on the validation set
+From the visualization, it can be concluded COVID-19 had an impact on home prices, however the shift in prices was not monumental.
+
+```{r}
+# forecast accuracy on validation set
 accuracy(sac_forecast, validation)
 
-# Print the forecast values
+# forecast values
 print(sac_forecast)
 ```
- 
+
 ### Alameda
- 
+
 ```{r}
 # create a ts for Alameda County
 al_ts <- ts(CA$Alameda, frequency = 12, start = c(1990, 1), end = c(2023, 9))
@@ -639,10 +814,10 @@ print(summary(al_sarima))
 ```
 
 ```{r}
-# forecast future values using the SARIMA model on the validation set - Alameda
+# forecast future values using SARIMA model on validation set - Alameda
 al_forecast <- forecast(al_sarima, h = length(validation))  
 
-# plot the original time series, fitted values, and forecast
+# plot SARIMA - Alameda
 autoplot(al_ts) +
   autolayer(fitted(al_sarima), series = "Fitted", color = "blue") +
   autolayer(al_forecast, series = "Forecast", color = "red") +
@@ -650,16 +825,18 @@ autoplot(al_ts) +
   theme_minimal()
 ```
 
-``` {r}
-# Evaluate the forecast accuracy on the validation set
+In Alameda county, the pandemic had almost no impact on the shifts in home prices. This conclusion can be derived from the visualization above.
+
+```{r}
+#  forecast accuracy on validation set
 accuracy(al_forecast, validation)
 
-# Print the forecast values
+#  forecast values
 print(al_forecast)
 ```
 
-### Santa Clara 
- 
+### Santa Clara
+
 ```{r}
 # create a ts for Santa Clara  County
 sc_ts <- ts(CA$`Santa Clara`, frequency = 12, start = c(1990, 1), end = c(2023, 9))
@@ -678,10 +855,10 @@ print(summary(sc_sarima))
 ```
 
 ```{r}
-# forecast future values using the SARIMA model on the validation set - Santa Clara
+# forecast future values using SARIMA model on validation set - Santa Clara
 sc_forecast <- forecast(sc_sarima, h = length(validation))  
 
-# plot the original time series, fitted values, and forecast
+# plot SARIMA - Santa Clara 
 autoplot(sc_ts) +
   autolayer(fitted(sc_sarima), series = "Fitted", color = "blue") +
   autolayer(sc_forecast, series = "Forecast", color = "red") +
@@ -689,16 +866,18 @@ autoplot(sc_ts) +
   theme_minimal()
 ```
 
-``` {r}
-# Evaluate the forecast accuracy on the validation set
+Santa Clara also appears to have not been impacted by the pandemic, as the actual values closely align with the forecast values.
+
+```{r}
+# forecast accuracy on validation set
 accuracy(sc_forecast, validation)
 
-# Print the forecast values
+# forecast values
 print(sc_forecast)
 ```
- 
+
 ### Los Angeles
- 
+
 ```{r}
 # create a ts for Los Angeles County
 la_ts <- ts(CA$`Los Angeles`, frequency = 12, start = c(1990, 1), end = c(2023, 9))
@@ -717,10 +896,10 @@ print(summary(la_sarima))
 ```
 
 ```{r}
-# forecast future values using the SARIMA model on the validation set - Los Angeles
+# forecast future values using SARIMA model on validation set - Los Angeles
 la_forecast <- forecast(la_sarima, h = length(validation))  
 
-# plot the original time series, fitted values, and forecast
+# plot SARIMA - Los Angeles 
 autoplot(la_ts) +
   autolayer(fitted(la_sarima), series = "Fitted", color = "blue") +
   autolayer(la_forecast, series = "Forecast", color = "red") +
@@ -728,15 +907,18 @@ autoplot(la_ts) +
   theme_minimal()
 ```
 
-``` {r}
-# Evaluate the forecast accuracy on the validation set
+From the visualization, we can conclude pandemic minorly shifted home prices in Los Angeles county.
+
+```{r}
+# forecast accuracy on the validation set
 accuracy(la_forecast, validation)
 
-# Print the forecast values
+# forecast values
 print(la_forecast)
 ```
- 
-### San Diego 
+
+### San Diego
+
 ```{r}
 # create a ts for San Diego County
 sd_ts <- ts(CA$`San Diego`, frequency = 12, start = c(1990, 1), end = c(2023, 9))
@@ -755,10 +937,10 @@ print(summary(sd_sarima))
 ```
 
 ```{r}
-# forecast future values using the SARIMA model on the validation set - San Diego
+# forecast future values using  SARIMA model on validation set - San Diego
 sd_forecast <- forecast(sd_sarima, h = length(validation))  
 
-# plot the original time series, fitted values, and forecast
+# plot SARIMA - San Diego 
 autoplot(sd_ts) +
   autolayer(fitted(sd_sarima), series = "Fitted", color = "blue") +
   autolayer(sd_forecast, series = "Forecast", color = "red") +
@@ -766,10 +948,12 @@ autoplot(sd_ts) +
   theme_minimal()
 ```
 
-``` {r}
-# Evaluate the forecast accuracy on the validation set
+San Diego was effected by the pandemic, the forecast (red line) home prices appear to be lower than the actual values (black line).
+
+```{r}
+# forecast accuracy on validation set
 accuracy(sd_forecast, validation)
 
-# Print the forecast values
+# forecast values
 print(sd_forecast)
 ```
